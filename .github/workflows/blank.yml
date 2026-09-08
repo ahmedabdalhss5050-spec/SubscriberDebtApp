@@ -34,14 +34,17 @@ jobs:
           PROJECT_DIR=$(dirname "$(find project -name settings.gradle.kts -print -quit)")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: تفعيل Java 17 و AndroidX
+      - name: ضبط Gradle و AndroidX
         run: |
           cat > "$PROJECT_DIR/gradle.properties" <<'EOF'
           android.useAndroidX=true
           android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+          org.gradle.workers.max=2
+          kotlin.daemon.jvm.options=-Xmx2g
           EOF
 
-      - name: إنشاء إعدادات توافق Java و Kotlin
+      - name: إصلاح توافق Java 17
         run: |
           cat > "$PROJECT_DIR/jvm17.init.gradle" <<'EOF'
           import org.gradle.api.tasks.compile.JavaCompile
@@ -51,17 +54,6 @@ jobs:
                   sourceCompatibility = "17"
                   targetCompatibility = "17"
               }
-
-              tasks.configureEach {
-                  if (name.contains("Kotlin") || name.contains("ksp")) {
-                      try {
-                          if (hasProperty("kotlinOptions")) {
-                              kotlinOptions.jvmTarget = "17"
-                          }
-                      } catch (Exception ignored) {
-                      }
-                  }
-              }
           }
           EOF
 
@@ -69,6 +61,7 @@ jobs:
         run: |
           cd "$PROJECT_DIR"
           gradle assembleDebug --no-daemon \
+            --max-workers=2 \
             --init-script jvm17.init.gradle \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true
