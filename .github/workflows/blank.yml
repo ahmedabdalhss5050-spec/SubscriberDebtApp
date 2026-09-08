@@ -3,7 +3,7 @@ name: Build Subscriber Debt APK
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -17,22 +17,27 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: إعداد Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: "8.9"
 
       - name: فك ملف المشروع
         run: |
-          mkdir project
+          mkdir -p project
           unzip -q SubscriberDebtApp_v2_phone_build.zip -d project
+
+      - name: تفعيل AndroidX
+        run: |
+          echo "android.useAndroidX=true" >> project/gradle.properties
+          echo "android.enableJetifier=true" >> project/gradle.properties
 
       - name: تحديد مجلد المشروع
         run: |
           PROJECT_DIR=$(dirname "$(find project -name settings.gradle.kts -print -quit)")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: بناء APK
         run: |
