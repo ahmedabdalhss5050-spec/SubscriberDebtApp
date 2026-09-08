@@ -1,74 +1,35 @@
-name: Build Subscriber Debt APK
+name: فحص ملفات المشروع
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
 
 jobs:
-  build:
+  inspect:
     runs-on: ubuntu-latest
 
     steps:
       - name: تحميل المستودع
         uses: actions/checkout@v4
 
-      - name: إعداد Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: إعداد Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
-
       - name: فك ملف المشروع
         run: |
           mkdir -p project
           unzip -q SubscriberDebtApp_v2_phone_build.zip -d project
 
-      - name: تحديد مجلد المشروع
+      - name: عرض ملفات Gradle
         run: |
-          PROJECT_DIR=$(dirname "$(find project -name settings.gradle.kts -print -quit)")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "===== ملفات المشروع ====="
+          find project -type f | sort
 
-      - name: ضبط Gradle و AndroidX
-        run: |
-          cat > "$PROJECT_DIR/gradle.properties" <<'EOF'
-          android.useAndroidX=true
-          android.enableJetifier=true
-          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
-          org.gradle.workers.max=2
-          kotlin.daemon.jvm.options=-Xmx2g
-          EOF
+          echo ""
+          echo "===== ملفات Gradle ====="
+          find project \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradle.properties" \) -print | sort
 
-      - name: إصلاح توافق Java 17
-        run: |
-          cat > "$PROJECT_DIR/jvm17.init.gradle" <<'EOF'
-          import org.gradle.api.tasks.compile.JavaCompile
+          echo ""
+          echo "===== محتوى ملفات Gradle المهمة ====="
 
-          allprojects {
-              tasks.withType(JavaCompile).configureEach {
-                  sourceCompatibility = "17"
-                  targetCompatibility = "17"
-              }
-          }
-          EOF
-
-      - name: بناء APK
-        run: |
-          cd "$PROJECT_DIR"
-          gradle assembleDebug --no-daemon \
-            --max-workers=2 \
-            --init-script jvm17.init.gradle \
-            -Pandroid.useAndroidX=true \
-            -Pandroid.enableJetifier=true
-
-      - name: حفظ APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: SubscriberDebtApp-APK
-          path: |
-            project/**/build/outputs/apk/**/*.apk
+          for file in $(find project -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradle.properties" \)); do
+            echo ""
+            echo "========== $file =========="
+            cat "$file"
+          done
