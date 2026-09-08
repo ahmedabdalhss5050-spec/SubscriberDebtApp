@@ -1,0 +1,35 @@
+name: فحص ملفات المشروع
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل المستودع
+        uses: actions/checkout@v4
+
+      - name: فك ملف المشروع
+        run: |
+          mkdir -p project
+          unzip -q SubscriberDebtApp_v2_phone_build.zip -d project
+
+      - name: عرض ملفات Gradle
+        run: |
+          echo "===== ملفات المشروع ====="
+          find project -type f | sort
+
+          echo ""
+          echo "===== ملفات Gradle ====="
+          find project \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradle.properties" \) -print | sort
+
+          echo ""
+          echo "===== محتوى ملفات Gradle ====="
+
+          for file in $(find project -type f \( -name "build.gradle" -o -name "build.gradle.kts" -o -name "settings.gradle" -o -name "settings.gradle.kts" -o -name "gradle.properties" \)); do
+            echo ""
+            echo "========== $file =========="
+            cat "$file"
+          done
