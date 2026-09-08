@@ -1,0 +1,47 @@
+name: Build Subscriber Debt APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: تحميل المستودع
+        uses: actions/checkout@v4
+
+      - name: إعداد Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: إعداد Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: فك ملف المشروع
+        run: |
+          mkdir project
+          unzip -q SubscriberDebtApp_v2_phone_build.zip -d project
+
+      - name: تحديد مجلد المشروع
+        run: |
+          PROJECT_DIR=$(dirname "$(find project -name settings.gradle.kts -print -quit)")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+      - name: بناء APK
+        run: |
+          cd "$PROJECT_DIR"
+          gradle assembleDebug --no-daemon
+
+      - name: حفظ APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubscriberDebtApp-APK
+          path: |
+            project/**/build/outputs/apk/**/*.apk
