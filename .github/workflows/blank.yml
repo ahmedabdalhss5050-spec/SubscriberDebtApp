@@ -29,20 +29,47 @@ jobs:
           mkdir -p project
           unzip -q SubscriberDebtApp_v2_phone_build.zip -d project
 
-      - name: تفعيل AndroidX
-        run: |
-          echo "android.useAndroidX=true" >> "$GITHUB_ENV"
-          echo "android.enableJetifier=true" >> "$GITHUB_ENV"
-
       - name: تحديد مجلد المشروع
         run: |
           PROJECT_DIR=$(dirname "$(find project -name settings.gradle.kts -print -quit)")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
+      - name: تفعيل Java 17 و AndroidX
+        run: |
+          cat > "$PROJECT_DIR/gradle.properties" <<'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+
+      - name: إنشاء إعدادات توافق Java و Kotlin
+        run: |
+          cat > "$PROJECT_DIR/jvm17.init.gradle" <<'EOF'
+          import org.gradle.api.tasks.compile.JavaCompile
+
+          allprojects {
+              tasks.withType(JavaCompile).configureEach {
+                  sourceCompatibility = "17"
+                  targetCompatibility = "17"
+              }
+
+              tasks.configureEach {
+                  if (name.contains("Kotlin") || name.contains("ksp")) {
+                      try {
+                          if (hasProperty("kotlinOptions")) {
+                              kotlinOptions.jvmTarget = "17"
+                          }
+                      } catch (Exception ignored) {
+                      }
+                  }
+              }
+          }
+          EOF
+
       - name: بناء APK
         run: |
           cd "$PROJECT_DIR"
           gradle assembleDebug --no-daemon \
+            --init-script jvm17.init.gradle \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true
 
